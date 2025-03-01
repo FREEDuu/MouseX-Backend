@@ -1,5 +1,10 @@
 package EdiaGroup.template.controller;
 
+import EdiaGroup.template.model.BasicUser;
+import EdiaGroup.template.model.Question;
+import EdiaGroup.template.model.TestGroup;
+import EdiaGroup.template.repository.BasicUserRepository;
+import EdiaGroup.template.repository.TestGroupRepository;
 import EdiaGroup.template.service.JwtService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -8,20 +13,46 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/private")
 public class PrivateController {
 
     private final JwtService jwtService;
+    private final BasicUserRepository basicUserRepository;
+    private final TestGroupRepository testGroupRepository;
 
     @Autowired
-    public PrivateController(JwtService jwtService) {
+    public PrivateController(JwtService jwtService, BasicUserRepository basicUserRepository, TestGroupRepository testGroupRepository) {
         this.jwtService = jwtService;
+        this.basicUserRepository = basicUserRepository;
+        this.testGroupRepository = testGroupRepository;
     }
+
 
     @GetMapping("/test")
     public ResponseEntity<String> testJwt(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
         return extractAndProcessToken(authorizationHeader, claims -> "Success for user: " + claims.getSubject());
+    }
+
+    @GetMapping("/test-group/get-all")
+    public List<TestGroup> getAllTestGroup(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
+        String username =  extractAndProcessToken(authorizationHeader, Claims::getSubject).getBody();
+        BasicUser user =  basicUserRepository.findByUsername(username);
+
+        return testGroupRepository.findByBasicUser(user);
+
+    }
+
+    @GetMapping("/test-group/create")
+    public TestGroup getTestGroup(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
+        String username =  extractAndProcessToken(authorizationHeader, Claims::getSubject).getBody();
+        BasicUser user =  basicUserRepository.findByUsername(username);
+        TestGroup newTestGroup = new TestGroup(user);
+        testGroupRepository.save(newTestGroup);
+        return newTestGroup;
+
     }
 
     @PostMapping("/refresh")
